@@ -23,7 +23,7 @@ class_name_path = "ucfTrainTestlist/classInd.txt"
 classes = parse_class(class_name_path)
 print (classes)
 
-ConvNet = load_model (#classes)
+--ConvNet = load_model (#classes)
 
 -- load datasets ILSVRC and UCF
 trainset, testset = load_data ()
