@@ -19,11 +19,13 @@ cmd:text()
 opt = cmd:parse(arg)
 ]]--
 
-n_classes = 101
+class_name_path = "ucfTrainTestlist/classInd.txt"
+classes = parse_class(class_name_path)
+print (classes)
 
-ConvNet = load_model()
+ConvNet = load_model (#classes)
 
 -- load datasets ILSVRC and UCF
-trainset, testset = load_data()
+trainset, testset = load_data ()
 
 -- finetune on UCF-101
