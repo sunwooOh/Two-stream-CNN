@@ -1,37 +1,49 @@
-
 function load_model(n_classes)
+	split_no = opt.spl
+
 	-- build ConvNet
-	ConvNet = nn.Concat(2)
+	parallel_model = nn.ParallelTable()
 
-	-- spatial stream ConvNet
---	proto_name = 'models/bvlc_alexnet/train_val.prototxt'
---	binary_name = 'models/bvlc_alexnet/bvlc_alexnet.caffemodel'
+	if opt.smod ~= 'nil' then
+		spatial = torch.load (opt.smod)
+	else
+		proto_name = 'cuhk_action_spatial_vgg_16_deploy.prototxt'
+		binary_name = 'cuhk_action_spatial_vgg_16_split' .. split_no .. '.caffemodel'
 
-	proto_name = 'cuhk_action_spatial_vgg_16_deploy.prototxt'
-	binary_name = 'cuhk_action_spatial_vgg_16_split1.caffemodel'
+		spatial = loadcaffe.load (proto_name, binary_name, 'cudnn')
+		spatial:add (nn.LogSoftMax():cuda())
 
-	spatial = loadcaffe.load (proto_name, binary_name, 'cudnn')
+		-- Reset weights
+		-- method = 'xavier'
+		-- temporal = require ('weight-init') (spatial, method)
+		-- print ('Weights initialized: xavier')
+	end
 
---[[
-	spatial:remove (spatial:size()-1)
-	spatial:remove (spatial:size())
-	spatial:add (nn.Linear (4096, n_classes))
-	spatial:add (nn.LogSoftMax())
-]]--
+	if opt.tmod ~= 'nil' then
+		temporal = torch.load (opt.tmod)
+	else
+		proto_name = 'cuhk_action_temporal_vgg_16_flow_deploy.prototxt'
+		binary_name = 'cuhk_action_temporal_vgg_16_split' .. split_no .. '.caffemodel'
 
-	-- temporal stream ConvNet
---	temporal = spatial:clone()
+		temporal = loadcaffe.load (proto_name, binary_name, 'cudnn')
+		temporal:add (nn.LogSoftMax():cuda())
 
-	--[[  TODO:
-		1. import models & binaries
-		2. remove "Gather" layers if needed
-		3. return concat'ed ConvNet for each spatial & temporal
-	--]]
+		-- Reset weights
+		-- method = 'xavier'
+		-- temporal = require ('weight-init') (temporal, method)
+		-- print ('Weights initialized: xavier')
 
-	ConvNet:add(spatial)
-	ConvNet:add(temporal)
+	end
 
-	print (ConvNet)
-	
-	return ConvNet
+	parallel_model:add (spatial)
+	parallel_model:add (temporal)
+	parallel_model:add (nn.CAddTable())
+	parallel_model:cuda()
+
+	TwoConv = nn.Sequential ()
+	TwoConv:add (parallel_model)
+	TwoConv:add (nn.MulConstant (0.5, false):cuda())
+	-- TwoConv:add (nn.LogSoftMax():cuda())
+
+	return spatial, temporal, TwoConv
 end

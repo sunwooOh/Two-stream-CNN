@@ -3,45 +3,58 @@ require 'loadcaffe'
 require 'nn'
 require 'cunn'
 require 'cudnn'		-- gpu mode
-require 'image'		-- rescaling
-require 'optim'		-- confusion matrix, sgd
+require 'image'		-- rescaling, save, load
+require 'socket'	-- randomseed
+require 'gnuplot'
 
 paths.dofile ('models.lua')
 paths.dofile ('dataset.lua')
 paths.dofile ('preprocess.lua')
+paths.dofile ('train.lua')
+paths.dofile ('test.lua')
+paths.dofile ('utility.lua')
 
--- parse command line options
---[[
+-- Parse command line options
 cmd = torch.CmdLine()
-cmd:text()
-cmd:text('Options:')
-cmd:option('-gpu', 0, 'do not use gpu')
-cmd:text()
+cmd:text ()
+cmd:text ('Options:')
+cmd:option ('-bat', 30, 'size of a minibatch for spatial net')
+cmd:option ('-tbat', 5, 'size of a minibatch for temporal net')
+cmd:option ('-twobat', 4, 'size of a minibatch for two_stream net')
+cmd:option ('-epc', 60, 'number of epochs')
+cmd:option ('-lrate', 0.005, 'learning rate')
+cmd:option ('-titer', 9510, 'number of iterations per a training pass')
+cmd:option ('-eiter', 3690, 'number of iterations per an evaluation')
+cmd:option ('-smod', 'nil', 'path of the trained spatial model to be loaded')
+cmd:option ('-tmod', 'nil', 'path of the trained temporal model to be loaded')
+cmd:option ('-twd', 0, 'LAMBDA value(weight decay) of L2-regularization for temporal net')
+cmd:option ('-tgc', 1000, 'gradient clipping')
+cmd:option ('-spl', 1, 'split number')
+cmd:text ()
 opt = cmd:parse(arg)
-]]--
 
 class_name_path = "ucfTrainTestlist/classInd.txt"
-classes = parse_class(class_name_path)
-print (classes)
+classes, target_tab = parse_class(class_name_path)
 
--- TODO: splits 1,2&3 separately
---s1_ConvNet, s2_ConvNet, s3_ConvNet = load_model (#classes)
+-- Start Timer
+timer = torch.Timer ()
 
--- load datasets ILSVRC and UCF
---load_data ()
+-- TODO:  splits 1,2&3 separately
+spatial, temporal, ConvNet = load_model (#classes)
 
-sp_train1, sp_test1 = sp_preprocess (1)
+-- print ('[loading model] time elapse: ' .. timer:time().real)
+
+-- print ('Entire ConvNet')
+print (ConvNet)
+
+-- Train spatial and temporal nets respectively
+-- sp_preprocess (spatial, target_tab)
+tm_preprocess (temporal, target_tab)
+
+-- two_stream (ConvNet)
 
 --[[
-tm_train1, tm_test1 = tm_preprocess (1)
-
-sp_train2, sp_test2 = sp_preprocess (2)
-tm_train2, tm_test2 = tm_preprocess (2)
-
-sp_train3, sp_test3 = sp_preprocess (3)
-tm_train3, tm_test3 = tm_preprocess (3)
+load_data(1)
+load_data(2)
+load_data(3)
 --]]
-
--- finetune on UCF-101 (actual training on spatial net)
-
--- test
