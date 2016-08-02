@@ -11,7 +11,7 @@ function load_model(n_classes)
 		binary_name = 'cuhk_action_spatial_vgg_16_split' .. split_no .. '.caffemodel'
 
 		spatial = loadcaffe.load (proto_name, binary_name, 'cudnn')
-		spatial:add (nn.LogSoftMax():cuda())
+		-- spatial:add (nn.LogSoftMax():cuda())
 
 		-- Reset weights
 		-- method = 'xavier'
@@ -26,7 +26,7 @@ function load_model(n_classes)
 		binary_name = 'cuhk_action_temporal_vgg_16_split' .. split_no .. '.caffemodel'
 
 		temporal = loadcaffe.load (proto_name, binary_name, 'cudnn')
-		temporal:add (nn.LogSoftMax():cuda())
+		-- temporal:add (nn.LogSoftMax():cuda())
 
 		-- Reset weights
 		-- method = 'xavier'

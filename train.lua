@@ -43,8 +43,8 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 	loss_vals = {}
 	acc_vals = {}
 
-	criterion = nn.ClassNLLCriterion():cuda()
-	-- criterion = nn.CrossEntropyCriterion():cuda()
+--	criterion = nn.ClassNLLCriterion():cuda()
+	criterion = nn.CrossEntropyCriterion():cuda()
 	
 	params, grad_params = net:getParameters ()
 
@@ -52,6 +52,10 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 	t_sp_inputs = torch.DoubleTensor (batch_size, 3, 224, 224)
 	t_targets = torch.DoubleTensor (batch_size)
 
+	optim_state = {
+		learningRate = learning_rate,
+		weightDecay = weight_decay
+	}
 
 	for i = 1, max_iter, batch_size do
 		train_list = io.open (train_path, "r")
@@ -59,7 +63,7 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 		rand_subl = random_input_table[{ { i, math.min(max_iter, i+batch_size-1) } }]
 		rand_subl = torch.totable (rand_subl)
 		table.sort (rand_subl, function (a, b) return a < b end)
-
+		
 		-- Load image & get frames
 		if channel_num == 20 then
 			inputs, targets = get_opflow (rand_subl, target_ind_tab, train_list)
@@ -72,46 +76,17 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 
 		if channel_num ~= 23 then
 			for bat = 1, batch_size do
-				if isnan (inputs[bat]:norm()) then
-					print ('bat '..bat..' of input')
-					print (inputs[bat])
-				end
-
 				t_inputs[bat]:copy (inputs[bat])
 				t_targets[bat] = targets[bat]
 
 			end
 			
-			
-			if isnan (t_inputs:norm()) then
-				print ('Input NaN detected at stage: PUTTING IN THE BATCH')
-				print ('rand_subl: ')
-				for t = 1, #rand_subl do
-					print (rand_subl[t])
-				end
-				print ('bat : '..bat)
-			end
-
 			c_inputs = t_inputs:cuda ()
 			c_targets = t_targets:cuda ()
 
-			if isnan (c_inputs:norm()) then
-				print ('Input NaN detected at stage: CUDA ()')
-				print ('rand_subl: ')
-					for t = 1, #rand_subl do
-						print (rand_subl[t])
-					end
-				print (bat)
-			end
-
 		else		-- Two-stream cnn
 			for bat = 1, batch_size do
-				if not inputs[bat] then
-					print ("inputs["..bat.."] is nil")
-					print (inputs)
-					print (targets)
-				end
-				t_sp_inputs[bat]:copy (sp_inputs[bat])			
+				t_sp_inputs[bat]:copy (sp_inputs[bat])
 				t_inputs[bat]:copy (tm_inputs[bat])
 				t_targets[bat] = targets[bat]
 			end
@@ -122,22 +97,39 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 			table.insert (c_inputs, t_sp_inputs)
 			table.insert (c_inputs, t_inputs)
 			c_targets = t_targets:cuda()
-		end			
+		end	
 	
 		-- Net forward/backward ------------------------------------------------------
-		grad_params:zero ()
+		local feval = function (params)
+			grad_params:zero ()
 
-		output = net:forward (c_inputs)
-		loss = criterion:forward (output, c_targets)
+			output = net:forward (c_inputs)
+			loss = criterion:forward (output, c_targets)
+			
+			dloss_dout = criterion:backward (output, c_targets)
+			net:backward (c_inputs, dloss_dout)
+			
+			-- Gradient clipping
+			grad_params = grad_params:clamp (-clip, clip)
 
-		dloss_dout = criterion:backward (output, c_targets)
-		net:backward (c_inputs, dloss_dout)
-		------------------------------------------------------------------------------
+			-- L2 Regularization
+			if weight_decay ~= 0 then
+				table.insert (loss_vals, loss)
+				loss = loss + weight_decay * torch.norm (params, 2)^2
+				grad_params:add (params:clone ():mul (weight_decay))
 
-		--grad_params:zero ()
+				print ('Loss after L2 reg: ' .. loss)
 
-		-- Gradient clipping ---------------------------------------------------------
-		grad_params:clamp (-clip, clip)
+			else
+				table.insert (loss_vals, loss)
+			end
+
+			print ('-----------------------------------------------------')
+			print ('   [[[ Batch ' .. counter .. ' / ' .. opt.epc*max_iter/batch_size .. ' -- Epoch '.. epc ..' / '..epochs..' ]]]')
+			print ('Loss: ' .. loss)
+
+			return loss, grad_params
+		end
 		------------------------------------------------------------------------------
 
 		if isnan (loss) then
@@ -148,23 +140,6 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 			print ('-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-')
 		end
 
-		print ('-----------------------------------------------------')
-		print ('   [[[ Batch ' .. counter .. ' / ' .. opt.epc*max_iter/batch_size .. ' -- Epoch '.. epc ..' / '..epochs..' ]]]')
-		print ('Loss: ' .. loss)
-
-		-- L2 Regularization ---------------------------------------------------------
-		if weight_decay ~= 0 then
-			table.insert (loss_vals, loss)
-			loss = loss + weight_decay * torch.norm (params, 2)^2
-			grad_params:add (params:clone ():mul (weight_decay))
-
-			print ('Loss after L2 reg: ' .. loss)
-
-		else
-			table.insert (loss_vals, loss)
-		end
-		------------------------------------------------------------------------------
-
 
 		-- Ratio of weights:update ---------------------------------------------------
 		-- Ratio: update / param
@@ -173,21 +148,16 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 		------------------------------------------------------------------------------
 
 
-		-- Vanilla update the weights -----------------------------------------------
-		params:add(grad_params:mul(-learning_rate))
+		-- Vanilla update the weights ------------------------------------------------
+--		params:add(grad_params:mul(-learning_rate))
+		------------------------------------------------------------------------------
+		
+		
+		-- SGD using optim -----------------------------------------------------------
+		optim.sgd (feval, params, optim_state)
 		------------------------------------------------------------------------------
 
 		conf_mat, accuracy = measure_acc (conf_mat, output, targets, batch_size)
-
-		-- if counter < lrate_stop then
-		-- 	if counter%lrate_step == 0 then
-		-- 		opt.lrate = learning_rate/lrate_decay
-		-- 		learning_rate = opt.lrate
-		-- 		print ('------------------------------------------------------------')
-		-- 		print ('	learning rate updated: ' .. learning_rate)
-		-- 		print ('------------------------------------------------------------')
-		-- 	end
-		-- end
 
 		-- table.insert (loss_vals, loss)
 		table.insert (acc_vals, accuracy)
@@ -197,9 +167,14 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 		print ('Norm of params: ' .. params:norm())
 		if channel_num < 23 then
 			print ('Norm of inputs: ' .. c_inputs:norm())
+		else
+			print ('Norm of rgb: ' .. c_inputs[1]:norm())
+			print ('Norm of optical flow: ' .. c_inputs[2]:norm())		
 		end
 		print ('Norm of outputs: ' .. output:norm())
 		print ('-----------------------------------------------------')
+
+--		if counter%100 == 0 then print (conf_mat) end
 
 		counter = counter + 1
 

@@ -25,12 +25,15 @@ function two_stream (model)
 	learning_rate = opt.lrate
 	lrstring = tostring (learning_rate)
 	lrate_decay = 0.1
+	split_num = opt.spl
 
-	train_loss = {}
-	train_loss_mean = {}
-	train_acc = {}
-	val_loss = {}
-	val_acc = {}
+	tr_losses = {}
+	tr_loss_mean = {}
+	tr_accs = {}
+	te_losses = {}
+	te_accs = {}
+	iter = {}
+	s = 0
 
 	for e = 1, epochs do
 		-- train:
@@ -45,6 +48,42 @@ function two_stream (model)
 
 		acc_test = test (model, rand_subl, 23, e, target_tab, split_num)
 
+		len = #iter
+		for t = 1, #loss_train do
+			if t > len then
+				if isnan (loss_train[t]) then
+					table.insert (tr_losses, -1)
+				else
+					table.insert (tr_losses, loss_train[t])
+				end
+				s = s + 1
+				table.insert (iter, s)
+			end
+		end
+	
+		table.insert (tr_accs, acc_train)
+		table.insert (te_accs, acc_test)
+		table.insert (tr_loss_mean, torch.Tensor (loss_train):mean())
+
+		t_iter = torch.Tensor (iter)
+		t_tr_accs = torch.Tensor (tr_accs)
+		t_te_accs = torch.Tensor (te_accs)
+		t_tr_losses = torch.Tensor (tr_losses)
+		t_tr_loss_mean = torch.Tensor (tr_loss_mean)
+
+		plot (nil, t_tr_accs, 'Epoch', 'Accuracy (%)', 'Training Accuracy', 0)
+		plot (nil, t_te_accs, 'Epoch', 'Accuracy (%)', 'Validation Accuracy', 0)
+		plot (nil, t_tr_losses, 'Iteration', 'Loss', 'Training Loss', 1)
+		plot_mult (nil, t_tr_accs, t_te_accs, 'Epoch', 'Training', 'Validation', 'Accuracy (%)', 'Training and Validation Accuracies')
+		plot (nil, t_tr_loss_mean, 'Epoch', 'Loss', 'Training Loss (per epoch)', 0)
+
+		 file_name = 'lr' .. lrstring .. 'bat' .. sp_batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
+		if not paths.dirp (save_path .. file_name) then
+			os.execute ('mkdir ' .. save_path .. file_name)
+		end
+
+		netsav = model:clone ('weight', 'bias')
+		torch.save (save_path .. file_name .. '/split_' .. split_num .. '_' .. e .. '.t7', netsav)
 	end
 
 end

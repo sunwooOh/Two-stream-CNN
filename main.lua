@@ -6,6 +6,7 @@ require 'cudnn'		-- gpu mode
 require 'image'		-- rescaling, save, load
 require 'socket'	-- randomseed
 require 'gnuplot'
+require 'optim'		-- solver
 
 paths.dofile ('models.lua')
 paths.dofile ('dataset.lua')
@@ -13,7 +14,8 @@ paths.dofile ('preprocess.lua')
 paths.dofile ('train.lua')
 paths.dofile ('test.lua')
 paths.dofile ('utility.lua')
-
+paths.dofile ('two_stream.lua')
+paths.dofile ('train_v2.lua')
 -- Parse command line options
 cmd = torch.CmdLine()
 cmd:text ()

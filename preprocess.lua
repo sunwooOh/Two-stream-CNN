@@ -34,20 +34,15 @@ function get_frames (root_path, root_fname, channel, ext)
 		end
 	end
 
-	
-	-- print ('[get_frames] Finished counting lines')
- 
 	math.randomseed (socket.gettime (10000))
 	if channel == 3 then
 		num_frames = 1
 		frm_idx = math.random (0, 10000)%(cnt-1)
 	elseif channel == 1 then
 		num_frames = 20
-		-- frm_idx = math.random (0, 10000)%(cnt-20)
+		frm_idx = math.random (0, 10000)%(cnt-20)
 		frm_idx = 1
 	end
-
-	-- print ('chosen random index : ' .. frm_idx)
 
 	for f = 1, num_frames, 2 do
 		if channel == 1 then
@@ -61,9 +56,12 @@ function get_frames (root_path, root_fname, channel, ext)
 		elseif channel == 3 then
 			fpath = root_path .. root_fname .. "_" .. frm_idx+f .. ext
 			frame = image.load (fpath, channel, 'double')
+			image.save ('spatial_in.png', frame)
 		end
 	end
 
+	-- print ('frame size: ')
+	-- print (frame:size())
 	-- file = io.open ('input_sanity1.txt', 'w')
 	-- TODO: normalization of the image --> after crop?
 
@@ -84,7 +82,7 @@ function get_frames (root_path, root_fname, channel, ext)
 	if channel == 3 then
 		-- resize image : 240 x 320 to 256 x 320
 		frame = image.scale (frame, width, height)
-		frame = frame:resize (num_frames, height, width)
+		frame = frame:resize (depth, height, width)
 	end
 	if isnan (frame:norm()) then
 		print ('Input NaN detected at stage: AFTER CORNER CROP')
@@ -92,17 +90,25 @@ function get_frames (root_path, root_fname, channel, ext)
 		print ('Root fname: ' .. root_fname)
 		print ('Frame index: ' .. frm_idx)
 	end
+	-- print ('frame size:')
+	-- print (frame:size())
 	
 	-- -- corner crop / random flip / rgb jittering
 	crp_frm = frame:narrow (2, ofs_x, scale[multi])
 	crp_frm = crp_frm:narrow (3, ofs_y, scale[multi])
 
-	-- if scale[multi] ~= 224 then
+	-- print ('scale now : '..scale[multi])
+	-- if scale[multi] == 224 then
+	-- 	print ('if 224:')
+	-- 	print (crp_frm:size())
+	-- end
+
+	if scale[multi] ~= 224 then
 		crp_frm = image.scale (crp_frm, 224, 224)
 
 		-- crp_frm = image.scale (frame, 224, 224)
 		crp_frm = crp_frm:resize (depth, 224, 224)
-	-- end
+	end
 
 	if isnan (crp_frm:norm()) then
 		print ('Input NaN detected at stage: AFTER SCALING')
@@ -124,15 +130,38 @@ function get_frames (root_path, root_fname, channel, ext)
 		print ('Frame index: ' .. frm_idx)
 	end
 
+	-- print ('img mean before normalization: '..crp_frm:mean())
+	-- print ('img std befor normalization: '..crp_frm:std())
+
 	-- 3. normalization
 	-- nm = crp_frm:norm()
-	for j = 1, channel do
+
+	-- print ('image mean : ' .. crp_frm:mean())
+	-- print ('image max : ' .. torch.max (crp_frm))
+	-- print ('image min : ' .. torch.min (crp_frm))
+	crp_frm:mul(255)
+
+	for j = 1, depth do
 		img_mean = crp_frm [{ {j}, {}, {} }]:mean()
 		img_std = crp_frm [{ {j}, {}, {} }]:std()
+
 		crp_frm [{ {j}, {}, {} }]:add(-img_mean)
-		crp_frm [{ {j}, {}, {} }]:div(img_std)
+		if isnan (crp_frm:norm()) then print ('img_mean') end
+
+		-- if channel == 3 then
+		-- 	crp_frm [{ {j}, {}, {} }]:div(img_std)
+		-- 	if isnan (crp_frm:norm()) then print ('img_std') end
+		-- end
 	end
 
+	if isnan (crp_frm:norm()) then
+		print ('Input NaN detected at stage: AFTER NORMALIZATION')
+		print ('Root path: ' .. root_path)
+		print ('Root fname: ' .. root_fname)
+		print ('Frame index: ' .. frm_idx)
+		print ('crop_frm std: '..img_std)
+		print ('image mean: ' .. img_mean)
+	end
 	-- print ("difference: ".. crp_frm:norm()-nm)
 
 	-- rgb to bgr if spatial
@@ -148,13 +177,13 @@ function get_frames (root_path, root_fname, channel, ext)
 
 	-- print ('[get_frames] time elapsed to preprocess image: ' .. timer:time().real-init_time)
 	if isnan (res_frm:norm()) then
-		print ('Input NaN detected at stage: AFTER NORMALIZATION')
+		print ('Input NaN detected at stage: AFTER rgb')
 		print ('Root path: ' .. root_path)
 		print ('Root fname: ' .. root_fname)
 		print ('Frame index: ' .. frm_idx)
+		print ('crop_frm std: '..img_std)
+		print ('image mean: ' .. img_mean)
 	end
-
-	-- file:close()
 
 	return res_frm
 end
@@ -218,6 +247,8 @@ function sp_preprocess (model, target_tab)
 
 	test_path = "/home/sunwoo/Desktop/two-stream/ucfTrainTestlist/testlist0"
 	test_path = test_path .. split_num .. ".txt"
+
+	save_path = 'save_data/spatial/'
 	
 	tot_trains = 0
 	for i in io.lines (train_path) do
@@ -234,9 +265,13 @@ function sp_preprocess (model, target_tab)
 	epochs = opt.epc
 	epcs = {}
 	tr_losses = {}
+	tr_loss_nm = {}
 	tr_accs = {}
 	te_losses = {}
 	te_accs = {}
+	iter = {}
+	lrstring = tostring (opt.lrate)
+	s = 1
 
 	for e = 1, epochs do
 		train_list = io.open (train_path, "r")
@@ -280,16 +315,59 @@ function sp_preprocess (model, target_tab)
 		table.insert (epcs, e)
 		table.insert (tr_accs, acc_train)
 		table.insert (te_accs, acc_test)
-		table.insert (tr_losses, loss_train:norm())
+		table.insert (tr_loss_nm, torch.Tensor(loss_train):mean())
 		-- table.insert (te_losses, loss_test:norm())
+		len = #iter
 
-		plot (torch.Tensor (epcs), torch.Tensor (tr_accs), 'Epochs', 'Accuracy', 'training_accuracy')
-		plot (torch.Tensor (epcs), torch.Tensor (te_accs), 'Epochs', 'Accuracy', 'test_accuracy')
-		plot (torch.Tensor (epcs), torch.Tensor (tr_losses), 'Epochs', 'Loss', 'training_loss')
-		-- plot (torch.Tensor (epcs), torch.Tensor (te_losses), 'Epochs', 'Loss', 'test_loss')
+		for t = 1, #loss_train do
+			if t > len then
+				if isnan (loss_train[t]) then
+					table.insert (tr_losses, -1)
+				else
+					table.insert (tr_losses, loss_train[t])
+				end
 
+				table.insert (iter, s)
+				s = s + 1
+			end
+		end
+
+		t_epcs = torch.Tensor (epcs)
+		t_iter = torch.Tensor (iter)
+		t_tr_accs = torch.Tensor (tr_accs)
+		t_te_accs = torch.Tensor (te_accs)
+		t_tr_losses = torch.Tensor (tr_losses)
+		t_tr_loss_nm = torch.Tensor (tr_loss_nm)
+
+		plot (t_epcs, t_tr_accs, 'Epoch', 'Accuracy (%)', 'Training Accuracy', 0)
+		plot (t_epcs, t_te_accs, 'Epoch', 'Accuracy (%)', 'Validation Accuracy', 0)
+		plot (t_iter, t_tr_losses, 'Iteration', 'Loss', 'Training Loss', 1)
+		plot_mult (t_epcs, t_tr_accs, t_te_accs, 'Epoch', 'Training', 'Validation', 'Accuracy (%)', 'Training and Validation Accuracies')
+		plot (t_epcs, t_tr_loss_nm, 'Epoch', 'Loss', 'Training Loss (epc)', 0)
+
+		-- netsav = model:clone ('weight', 'bias')
+		-- torch.save ('spatial_sp_' .. split_num .. '_' .. e .. '.t7', netsav)
+
+		file_name = 'lr' .. lrstring .. 'bat' .. batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
+		if not paths.dirp (save_path .. file_name) then
+			os.execute ('mkdir ' .. save_path .. file_name)
+		end
+
+		-- save tables
+		tables = {
+			tr_acc = t_tr_accs,
+			vl_acc = t_te_accs,
+			tr_loss = t_tr_losses,
+			tr_loss_mean = t_tr_loss_nm,
+			ten_it = t_iter,
+			ten_ep = t_epcs
+		}
+		torch.save (save_path .. file_name .. '/tables.dat', tables)
+
+		-- save current network
 		netsav = model:clone ('weight', 'bias')
-		torch.save ('spatial_sp_' .. split_num .. '_' .. e .. '.t7', netsav)
+		torch.save (save_path .. file_name .. '/split_' .. split_num .. '_' .. e .. '.t7', netsav)
+
 	end
 
 	train_list:close ()
@@ -332,8 +410,8 @@ function get_opflow (linenum_tab, target_tab, fname_table)
 			fpath = rpath .. cname .. '/' .. sname
 
 			input_volume = get_frames (fpath, 'flow_x_', 1, '.jpg')
-
 			target = target_tab[cname]
+
 			table.insert (targets, target)
 			table.insert (inputs, input_volume)
 
