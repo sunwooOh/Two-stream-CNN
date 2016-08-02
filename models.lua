@@ -37,13 +37,13 @@ function load_model(n_classes)
 
 	parallel_model:add (spatial)
 	parallel_model:add (temporal)
-	parallel_model:add (nn.CAddTable())
-	parallel_model:cuda()
+	-- parallel_model:add (nn.CAddTable())
+	-- parallel_model:cuda()
 
 	TwoConv = nn.Sequential ()
 	TwoConv:add (parallel_model)
 	TwoConv:add (nn.MulConstant (0.5, false):cuda())
 	-- TwoConv:add (nn.LogSoftMax():cuda())
 
-	return spatial, temporal, TwoConv
+	return spatial, temporal, parallel_model--TwoConv
 end

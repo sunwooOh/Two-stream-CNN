@@ -71,6 +71,7 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 			inputs, targets = get_video (rand_subl, train_list, target_ind_tab)
 		else
 			sp_inputs, targets = get_video (rand_subl, train_list, target_ind_tab)
+			train_list = io.open (train_path, "r")
 			tm_inputs, targets = get_opflow (rand_subl, target_ind_tab, train_list)
 		end
 
@@ -104,6 +105,11 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 			grad_params:zero ()
 
 			output = net:forward (c_inputs)
+			if channel_num == 23 then
+				output = output[1] + output[2]
+				output:div(2)
+			end
+
 			loss = criterion:forward (output, c_targets)
 			
 			dloss_dout = criterion:backward (output, c_targets)

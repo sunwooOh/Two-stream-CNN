@@ -391,6 +391,7 @@ function get_opflow (linenum_tab, target_tab, fname_table)
 	while true do
 		fname_line = fname_table:read ("*l")
 		if not fname_line then
+			print (fname_line)
 			print ("fname_line is nil")
 			break
 		end

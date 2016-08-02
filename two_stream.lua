@@ -1,4 +1,6 @@
 function two_stream (model)
+	split_num = opt.spl
+
 	train_path = "/home/sunwoo/Desktop/two-stream/ucfTrainTestlist/trainlist0"
 	train_path = train_path .. split_num .. ".txt"
 
@@ -77,7 +79,16 @@ function two_stream (model)
 		plot_mult (nil, t_tr_accs, t_te_accs, 'Epoch', 'Training', 'Validation', 'Accuracy (%)', 'Training and Validation Accuracies')
 		plot (nil, t_tr_loss_mean, 'Epoch', 'Loss', 'Training Loss (per epoch)', 0)
 
-		 file_name = 'lr' .. lrstring .. 'bat' .. sp_batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
+		-- Learning rate decay
+		if e%4 == 0 and e < 15 then
+			opt.lrate = opt.lrate * lrate_decay
+			print ('----------------------------------------------------------------')
+			print ('	learning rate updated: ' .. opt.lrate)
+			print ('----------------------------------------------------------------')
+		end
+
+		file_name = 'lr' .. lrstring .. 'bat' .. sp_batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
+
 		if not paths.dirp (save_path .. file_name) then
 			os.execute ('mkdir ' .. save_path .. file_name)
 		end
