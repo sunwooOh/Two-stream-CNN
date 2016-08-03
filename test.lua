@@ -47,6 +47,7 @@ function test (net, random_input_table, channel_num, epc, target_ind_tab)
 			inputs, targets = get_video (rand_subl, test_list, target_ind_tab)
 		else
 			sp_inputs, targets = get_video (rand_subl, test_list, target_ind_tab)
+			test_list = io.open (test_path, "r")
 			tm_inputs, targets = get_opflow (rand_subl, target_ind_tab, test_list)
 		end
 

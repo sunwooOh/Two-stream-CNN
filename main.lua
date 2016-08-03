@@ -46,7 +46,8 @@ spatial, temporal, ConvNet = load_model (#classes)
 
 -- print ('[loading model] time elapse: ' .. timer:time().real)
 
--- print ('Entire ConvNet')
+-- ConvNet = ConvNet:float()
+ConvNet = ConvNet:cuda()
 print (ConvNet)
 
 -- Train spatial and temporal nets respectively

@@ -44,6 +44,7 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 	acc_vals = {}
 
 --	criterion = nn.ClassNLLCriterion():cuda()
+	-- criterion = nn.CriterionTable (nn.CrossEntropyCriterion():cuda())
 	criterion = nn.CrossEntropyCriterion():cuda()
 	
 	params, grad_params = net:getParameters ()
@@ -105,15 +106,18 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 			grad_params:zero ()
 
 			output = net:forward (c_inputs)
-			if channel_num == 23 then
-				output = output[1] + output[2]
-				output:div(2)
-			end
+			-- if channel_num == 23 then
+			-- 	output = output[1] + output[2]
+			-- 	output:div(2)
+			-- end
+			-- print (output)
 
 			loss = criterion:forward (output, c_targets)
+			-- print (loss)
 			
 			dloss_dout = criterion:backward (output, c_targets)
-			net:backward (c_inputs, dloss_dout)
+			-- print (dloss_dout)
+			net:backward (c_inputs, dloss_dout)	--
 			
 			-- Gradient clipping
 			grad_params = grad_params:clamp (-clip, clip)

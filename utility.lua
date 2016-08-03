@@ -42,9 +42,9 @@ function plot (x_val, y_val, xlabel, ylabel, _title, line)
 	gnuplot.ylabel (ylabel)
 
 	if line == 1 then
-		gnuplot.plot (x_val, y_val, '-')
+		gnuplot.plot (y_val, '-')
 	else
-		gnuplot.plot (x_val, y_val)
+		gnuplot.plot (y_val)
 	end
 	
 	gnuplot.plotflush ()
@@ -70,8 +70,8 @@ function plot_mult (x_val, y_val1, y_val2, xlabel, ylabel1, ylabel2, ylabel, _ti
 	gnuplot.ylabel (ylabel)
 
 	gnuplot.plot (
-		{ ylabel1, x_val, y_val1, '+-' },
-		{ ylabel2, x_val, y_val2, '+-' }
+		{ ylabel1, y_val1, '+-' },
+		{ ylabel2, y_val2, '+-' }
 	)
 
 	gnuplot.plotflush ()
