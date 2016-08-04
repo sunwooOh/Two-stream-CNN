@@ -56,14 +56,9 @@ function get_frames (root_path, root_fname, channel, ext)
 		elseif channel == 3 then
 			fpath = root_path .. root_fname .. "_" .. frm_idx+f .. ext
 			frame = image.load (fpath, channel, 'double')
-			image.save ('spatial_in.png', frame)
+			-- image.save ('spatial_in.png', frame)
 		end
 	end
-
-	-- print ('frame size: ')
-	-- print (frame:size())
-	-- file = io.open ('input_sanity1.txt', 'w')
-	-- TODO: normalization of the image --> after crop?
 
 	corner = math.random (1, 5000) % 5
 	multi = math.random (1, 5000) % 4 + 1
@@ -80,7 +75,7 @@ function get_frames (root_path, root_fname, channel, ext)
 	end
 
 	if channel == 3 then
-		-- resize image : 240 x 320 to 256 x 320
+		-- Resize image : 240 x 320 to 256 x 320
 		frame = image.scale (frame, width, height)
 		frame = frame:resize (depth, height, width)
 	end
@@ -90,18 +85,10 @@ function get_frames (root_path, root_fname, channel, ext)
 		print ('Root fname: ' .. root_fname)
 		print ('Frame index: ' .. frm_idx)
 	end
-	-- print ('frame size:')
-	-- print (frame:size())
 	
 	-- -- corner crop / random flip / rgb jittering
 	crp_frm = frame:narrow (2, ofs_x, scale[multi])
 	crp_frm = crp_frm:narrow (3, ofs_y, scale[multi])
-
-	-- print ('scale now : '..scale[multi])
-	-- if scale[multi] == 224 then
-	-- 	print ('if 224:')
-	-- 	print (crp_frm:size())
-	-- end
 
 	if scale[multi] ~= 224 then
 		crp_frm = image.scale (crp_frm, 224, 224)
@@ -130,15 +117,8 @@ function get_frames (root_path, root_fname, channel, ext)
 		print ('Frame index: ' .. frm_idx)
 	end
 
-	-- print ('img mean before normalization: '..crp_frm:mean())
-	-- print ('img std befor normalization: '..crp_frm:std())
-
 	-- 3. normalization
-	-- nm = crp_frm:norm()
-
-	-- print ('image mean : ' .. crp_frm:mean())
-	-- print ('image max : ' .. torch.max (crp_frm))
-	-- print ('image min : ' .. torch.min (crp_frm))
+	-- [0, 1] range to [0, 255] range
 	crp_frm:mul(255)
 
 	for j = 1, depth do
@@ -148,10 +128,6 @@ function get_frames (root_path, root_fname, channel, ext)
 		crp_frm [{ {j}, {}, {} }]:add(-img_mean)
 		if isnan (crp_frm:norm()) then print ('img_mean') end
 
-		-- if channel == 3 then
-		-- 	crp_frm [{ {j}, {}, {} }]:div(img_std)
-		-- 	if isnan (crp_frm:norm()) then print ('img_std') end
-		-- end
 	end
 
 	if isnan (crp_frm:norm()) then
@@ -162,7 +138,6 @@ function get_frames (root_path, root_fname, channel, ext)
 		print ('crop_frm std: '..img_std)
 		print ('image mean: ' .. img_mean)
 	end
-	-- print ("difference: ".. crp_frm:norm()-nm)
 
 	-- rgb to bgr if spatial
 	if channel == 3 then
@@ -175,7 +150,6 @@ function get_frames (root_path, root_fname, channel, ext)
 		res_frm = crp_frm
 	end
 
-	-- print ('[get_frames] time elapsed to preprocess image: ' .. timer:time().real-init_time)
 	if isnan (res_frm:norm()) then
 		print ('Input NaN detected at stage: AFTER rgb')
 		print ('Root path: ' .. root_path)

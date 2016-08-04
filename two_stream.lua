@@ -53,7 +53,7 @@ function two_stream (model)
 		len = #iter
 		for t = 1, #loss_train do
 			if t > len then
-				if isnan (loss_train[t]) then
+				if isnan (loss_train[t]) or loss_train[t] > 30 then
 					table.insert (tr_losses, -1)
 				else
 					table.insert (tr_losses, loss_train[t])
@@ -80,12 +80,12 @@ function two_stream (model)
 		plot (nil, t_tr_loss_mean, 'Epoch', 'Loss', 'Training Loss (per epoch)', 0)
 
 		-- Learning rate decay
-		if e%4 == 0 and e < 15 then
-			opt.lrate = opt.lrate * lrate_decay
-			print ('----------------------------------------------------------------')
-			print ('	learning rate updated: ' .. opt.lrate)
-			print ('----------------------------------------------------------------')
-		end
+		-- if e%4 == 0 and e < 15 then
+		-- 	opt.lrate = opt.lrate * lrate_decay
+		-- 	print ('----------------------------------------------------------------')
+		-- 	print ('	learning rate updated: ' .. opt.lrate)
+		-- 	print ('----------------------------------------------------------------')
+		-- end
 
 		file_name = 'lr' .. lrstring .. 'bat' .. sp_batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
 

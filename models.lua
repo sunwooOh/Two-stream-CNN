@@ -5,6 +5,11 @@ function load_model(n_classes)
 	parallel_model = nn.ParallelTable()
 	model_path = 'models/'
 
+	if opt.mod ~= 'nil' then
+		TwoConv = torch.load (opt.mod)
+
+		return nil, nil, TwoConv
+
 	if opt.smod ~= 'nil' then
 		spatial = torch.load (opt.smod)
 	else

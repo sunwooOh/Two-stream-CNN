@@ -55,7 +55,8 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 
 	optim_state = {
 		learningRate = learning_rate,
-		weightDecay = weight_decay
+		weightDecay = weight_decay,
+		momentum = 0.9
 	}
 
 	for i = 1, max_iter, batch_size do
