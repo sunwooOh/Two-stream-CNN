@@ -33,6 +33,7 @@ cmd:option ('-mod', 'nil', 'path of the trained twostream model')
 cmd:option ('-twd', 0, 'LAMBDA value(weight decay) of L2-regularization for temporal net')
 cmd:option ('-tgc', 1000, 'gradient clipping')
 cmd:option ('-spl', 1, 'split number')
+cmd:option ('-res', 0, 'use residual network')
 cmd:text ()
 opt = cmd:parse(arg)
 

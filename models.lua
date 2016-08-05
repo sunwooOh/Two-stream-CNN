@@ -9,12 +9,18 @@ function load_model(n_classes)
 		TwoConv = torch.load (opt.mod)
 
 		return nil, nil, TwoConv
+	end
 
 	if opt.smod ~= 'nil' then
 		spatial = torch.load (opt.smod)
 	else
-		proto_name = model_path .. 'cuhk_action_spatial_vgg_16_deploy.prototxt'
-		binary_name = model_path .. 'vgg_16_action_rgb_pretrain.caffemodel'
+		if opt.res == 1 then
+			proto_name = model_path .. 'resnet/' .. 'ResNet-50-deploy.prototxt'
+			binary_name = model_path .. 'resnet/' .. 'ResNet-50-model.caffemodel'
+		else
+			proto_name = model_path .. 'cuhk_action_spatial_vgg_16_deploy.prototxt'
+			binary_name = model_path .. 'vgg_16_action_rgb_pretrain.caffemodel'
+		end
 		-- binary_name = 'cuhk_action_spatial_vgg_16_split' .. split_no .. '.caffemodel'
 
 		spatial = loadcaffe.load (proto_name, binary_name, 'cudnn')

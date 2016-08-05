@@ -87,14 +87,16 @@ function two_stream (model)
 		-- 	print ('----------------------------------------------------------------')
 		-- end
 
-		file_name = 'lr' .. lrstring .. 'bat' .. sp_batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
+		if e%5 == 0 then
+			file_name = 'lr' .. lrstring .. 'bat' .. sp_batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
 
-		if not paths.dirp (save_path .. file_name) then
-			os.execute ('mkdir ' .. save_path .. file_name)
+			if not paths.dirp (save_path .. file_name) then
+				os.execute ('mkdir ' .. save_path .. file_name)
+			end
+
+			netsav = model:clone ('weight', 'bias')
+			torch.save (save_path .. file_name .. '/split_' .. split_num .. '_' .. e .. '.t7', netsav)
 		end
-
-		netsav = model:clone ('weight', 'bias')
-		torch.save (save_path .. file_name .. '/split_' .. split_num .. '_' .. e .. '.t7', netsav)
 	end
 
 end

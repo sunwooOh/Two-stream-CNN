@@ -17,8 +17,9 @@ end
 
 root_path = 'save_data/temporal/'
 dir_name = {
-	'lr0.001bat5ti9300_wd1e-4gc5/',
-	'lr0.0001bat5ti9300/',
+--	'lr0.001bat5ti9300_wd1e-4gc5/',
+--	'lr0.0001bat5ti9300/',
+	
 }
 file_name = 'tables.dat'
 save_path = 'cat_plots/'
