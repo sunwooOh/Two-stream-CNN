@@ -80,12 +80,12 @@ function two_stream (model)
 		plot (nil, t_tr_loss_mean, 'Epoch', 'Loss', 'Training Loss (per epoch)', 0)
 
 		-- Learning rate decay
-		-- if e%4 == 0 and e < 15 then
-		-- 	opt.lrate = opt.lrate * lrate_decay
-		-- 	print ('----------------------------------------------------------------')
-		-- 	print ('	learning rate updated: ' .. opt.lrate)
-		-- 	print ('----------------------------------------------------------------')
-		-- end
+		if e%20 == 0 then
+			opt.lrate = opt.lrate * lrate_decay
+			print ('----------------------------------------------------------------')
+			print ('	learning rate updated: ' .. opt.lrate)
+			print ('----------------------------------------------------------------')
+		end
 
 		if e%5 == 0 then
 			file_name = 'lr' .. lrstring .. 'bat' .. sp_batch_size .. 'ti' .. opt.titer .. 'wd' .. opt.twd .. 'gc' .. opt.tgc
@@ -93,6 +93,17 @@ function two_stream (model)
 			if not paths.dirp (save_path .. file_name) then
 				os.execute ('mkdir ' .. save_path .. file_name)
 			end
+
+			-- save tables
+			tables = {
+				tr_acc = t_tr_accs,
+				vl_acc = t_te_accs,
+				tr_loss = t_tr_losses,
+				tr_loss_mean = t_tr_loss_nm,
+				ten_it = t_iter,
+				ten_ep = t_epcs
+			}
+			torch.save (save_path .. file_name .. '/tables.dat', tables)
 
 			netsav = model:clone ('weight', 'bias')
 			torch.save (save_path .. file_name .. '/split_' .. split_num .. '_' .. e .. '.t7', netsav)

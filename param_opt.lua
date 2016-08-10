@@ -14,4 +14,6 @@ hex:setParam (hp)
 hex:setMeta (md)
 hex:setResult (res)
 
-
+hs = hypero.Sampler ()
+hp = {}
+hp.preprocess 

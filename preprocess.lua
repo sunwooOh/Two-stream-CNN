@@ -121,23 +121,13 @@ function get_frames (root_path, root_fname, channel, ext)
 	-- [0, 1] range to [0, 255] range
 	crp_frm:mul(255)
 
-	for j = 1, depth do
-		img_mean = crp_frm [{ {j}, {}, {} }]:mean()
-		img_std = crp_frm [{ {j}, {}, {} }]:std()
+	-- for j = 1, depth do
+	-- 	img_mean = crp_frm [{ {j}, {}, {} }]:mean()
+	-- 	img_std = crp_frm [{ {j}, {}, {} }]:std()
 
-		crp_frm [{ {j}, {}, {} }]:add(-img_mean)
-		if isnan (crp_frm:norm()) then print ('img_mean') end
-
-	end
-
-	if isnan (crp_frm:norm()) then
-		print ('Input NaN detected at stage: AFTER NORMALIZATION')
-		print ('Root path: ' .. root_path)
-		print ('Root fname: ' .. root_fname)
-		print ('Frame index: ' .. frm_idx)
-		print ('crop_frm std: '..img_std)
-		print ('image mean: ' .. img_mean)
-	end
+	-- 	crp_frm [{ {j}, {}, {} }]:add(-img_mean)
+	-- 	if isnan (crp_frm:norm()) then print ('img_mean') end
+	-- end
 
 	-- rgb to bgr if spatial
 	if channel == 3 then

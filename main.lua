@@ -46,16 +46,12 @@ timer = torch.Timer ()
 -- TODO:  splits 1,2&3 separately
 spatial, temporal, ConvNet = load_model (#classes)
 
--- print ('[loading model] time elapse: ' .. timer:time().real)
-
--- ConvNet = ConvNet:float()
-ConvNet = ConvNet:cuda()
-print (ConvNet)
-
 -- Train spatial and temporal nets respectively
 --sp_preprocess (spatial, target_tab)
 --tm_preprocess (temporal, target_tab)
 
+ConvNet = ConvNet:cuda()
+-- print (ConvNet)
 two_stream (ConvNet)
 
 --[[
@@ -63,3 +59,5 @@ load_data(1)
 load_data(2)
 load_data(3)
 --]]
+
+-- mean_calc()

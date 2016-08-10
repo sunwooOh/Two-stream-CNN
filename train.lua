@@ -38,10 +38,26 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 	learning_rate = opt.lrate
 	max_iter = opt.titer
 	epochs = opt.epc
+	res = opt.res
 	conf_mat = torch.Tensor (101, 101):zero ()
 
 	loss_vals = {}
 	acc_vals = {}
+
+	vgg_mean = {
+		g = 103.939,
+		b = 116.779,
+		r = 123.68
+	}
+	res_mean = {
+		spl_1 = 0,
+		spl_2 = 0,
+		spl_3 = 0,
+		mean
+	}
+	if split_num == 1 then res_mean.mean = res_mean.spl_1
+	elseif split_num == 2 then res_mean.mean = res_mean.spl_2
+	else res_mean.mean = res_mean.spl_3 end
 
 --	criterion = nn.ClassNLLCriterion():cuda()
 	-- criterion = nn.CriterionTable (nn.CrossEntropyCriterion():cuda())
@@ -69,19 +85,35 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 		-- Load image & get frames
 		if channel_num == 20 then
 			inputs, targets = get_opflow (rand_subl, target_ind_tab, train_list)
+	
 		elseif channel_num == 3 then
 			inputs, targets = get_video (rand_subl, train_list, target_ind_tab)
+
 		else
 			sp_inputs, targets = get_video (rand_subl, train_list, target_ind_tab)
 			train_list = io.open (train_path, "r")
 			tm_inputs, targets = get_opflow (rand_subl, target_ind_tab, train_list)
+			
+			sum = 0
+			for t = 1, _channel_num do
+				sum = sum + tm_inputs[t]:sum()
+			end
+			tmp_mean = sum / (_channel_num*batch_size*224*224)
 		end
+
 
 		if channel_num ~= 23 then
 			for bat = 1, batch_size do
 				t_inputs[bat]:copy (inputs[bat])
 				t_targets[bat] = targets[bat]
 
+				if res then
+					t_inputs:add (-res_mean.mean)
+				else
+					t_inputs[{ {1}, {}, {} }]:add (-vgg_mean.g)
+					t_inputs[{ {2}, {}, {} }]:add (-vgg_mean.b)
+					t_inputs[{ {3}, {}, {} }]:add (-vgg_mean.r)
+				end
 			end
 			
 			c_inputs = t_inputs:cuda ()
@@ -89,9 +121,20 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 
 		else		-- Two-stream cnn
 			for bat = 1, batch_size do
+				
 				t_sp_inputs[bat]:copy (sp_inputs[bat])
 				t_inputs[bat]:copy (tm_inputs[bat])
 				t_targets[bat] = targets[bat]
+
+				-- if res then
+				-- 	t_sp_inputs:add (-res_mean.mean)
+				-- else
+				if not res then
+					t_sp_inputs[{ {1}, {}, {} }]:add (-vgg_mean.g)
+					t_sp_inputs[{ {2}, {}, {} }]:add (-vgg_mean.b)
+					t_sp_inputs[{ {3}, {}, {} }]:add (-vgg_mean.r)
+				end
+				t_inputs:add(-tmp_mean)
 			end
 
 			t_sp_inputs = t_sp_inputs:cuda()
@@ -149,6 +192,7 @@ function train (net, random_input_table, channel_num, epc, target_ind_tab)
 			print ('		 	NaN detected!!!!')
 			print ('-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-')
 			print ('-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-')
+			return
 		end
 
 

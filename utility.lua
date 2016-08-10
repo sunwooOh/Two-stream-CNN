@@ -87,3 +87,115 @@ function save_net (model, path)
 	netsav = model:clone ('weight', 'bias')
 	torch.save (path, model)
 end
+
+function mean_calc ()
+	for split_no = 1, 3 do
+		write_to = torch.DiskFile ('per_pixel_mean' .. split_no .. '.txt', 'w')
+
+		root_dir = "/data/sunwoo/ucf_spatial/"
+		train_path = "/home/sunwoo/Desktop/two-stream/ucfTrainTestlist/trainlist0"
+		train_path = train_path .. split_no .. ".txt"
+
+		-- train_list = io.open (train_path, 'r')
+
+		sum = 0
+		cnt = 0
+
+		for fline in io.lines (train_path) do
+			string.gsub (fline, "(.-)/", function (a) cname = a end)
+			string.gsub (fline, "_g(.-)_", function (a) sname = a end)
+			string.gsub (fline .. '*', "_c(.-)%.avi", function (a) fname = a end)
+			
+			cname = cname
+			sname = 'g' .. sname .. '/'
+			fname = 'c' .. fname
+
+			file_path = root_dir .. cname .. '/' .. sname
+			-- frame = get_frames (file_path, fname, 3, '.png')
+
+			idx = 1
+			while true do
+				-- file_name = root_path .. root_fname .. '_' .. idx+1 .. ext
+				file_name = file_path .. fname .. '_' .. idx .. '.png'
+				print (file_name)
+
+				if paths.filep (file_name) then
+					fpath = root_path 
+					img = image.load (file_name, 3, 'double')
+					-- img:mul(255)
+					print (img:mean())
+					print (img:sum())
+					idx = idx + 1
+					sum = sum + img:sum()
+					print (sum)
+					cnt = cnt + 1
+				else
+					break
+				end
+			end
+
+			
+		end
+
+		write_to:writeObject ('sum: ' .. sum)
+		write_to:writeObject ('count: ' ..cnt)
+		write_to:writeObject ('Per pixel mean of split ' .. split_no .. ': ' .. 255*sum/cnt)
+		write_to:close()
+	end
+end
+function mean_calc_tmp ()
+	for split_no = 1, 3 do
+		write_to = torch.DiskFile ('tmp_mean' .. split_no .. '.txt', 'w')
+
+		root_dir = '/data/sunwoo/ucf101_flow_img_tvl1_gpu/'
+		train_path = "/home/sunwoo/Desktop/two-stream/ucfTrainTestlist/trainlist0"
+		train_path = train_path .. split_no .. ".txt"
+
+		-- train_list = io.open (train_path, 'r')
+
+		sum = 0
+		cnt = 0
+
+		for fline in io.lines (train_path) do
+			string.gsub (fline, "(.-)/", function (a) cname = a end)
+			string.gsub (fline, "_g(.-)_", function (a) sname = a end)
+			string.gsub (fline .. '*', "_c(.-)%.avi", function (a) fname = a end)
+			
+			sname = 'v_' .. cname .. '_g' .. sname .. '_c' .. fname .. '/'
+			fpath = rpath .. cname .. '/' .. sname
+
+			file_path = root_dir .. cname .. '/' .. sname
+			-- frame = get_frames (file_path, fname, 3, '.png')
+
+			idx = 1
+			while true do
+				-- file_name = root_path .. root_fname .. '_' .. idx+1 .. ext
+				-- file_name = file_path .. fname .. '_' .. idx .. '.jpg'
+				fpath_x = get_name (file_path .. fname .. 'flow_x_', idx, 'jpg')
+				fpath_y = get_name (file_path .. fname .. 'flow_y_', idx, 'jpg')
+
+				print (fpath)
+
+				if paths.filep (file_name) then
+					fpath = root_path 
+					img_x = image.load (fpath_x, 1, 'double')
+					print (img:mean())
+					print (img:sum())
+					idx = idx + 1
+					sum = sum + img:sum()
+					print (sum)
+					cnt = cnt + 1
+				else
+					break
+				end
+			end
+
+			
+		end
+
+		write_to:writeObject ('sum: ' .. sum)
+		write_to:writeObject ('count: ' ..cnt)
+		write_to:writeObject ('Per pixel mean of split ' .. split_no .. ': ' .. 255*sum/cnt)
+		write_to:close()
+	end
+end
